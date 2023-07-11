@@ -65,7 +65,6 @@ def main():
     # Read full-> Create and compare short 
     try:
         src = pd.read_csv(srcFile, usecols= colName, sep= delimiter)
-        #src = srcFull[colName]
     except:
         print('Missing src file')
         sendEmail(sns_client, 'Daily Check: Failed', 'Daily check could not be completed: missing \'src.csv\' file.', TOPIC_ARN)
@@ -73,26 +72,21 @@ def main():
         
     try:
         newFull = pd.read_csv(newFile, sep= delimiter)
-        new = newFull[colName]
     except:
         print('Missing new file')
         sendEmail(sns_client, 'Daily Check: Failed', 'Daily check could not be completed: missing \'new.csv\' file.', TOPIC_ARN)
         exit()
 
     # Get differences
-    diff_in_new = new[~new.apply(tuple,1).isin(src.apply(tuple,1))]
-
-    # Store IDs
-    diffIDS = diff_in_new['id']
+    diff_in_new = newFull[colName][~newFull[colName].apply(tuple,1).isin(src.apply(tuple,1))]
 
     # Cut down new
-    newFull = newFull[newFull['id'].isin(diffIDS)]
+    newFull = newFull[newFull['id'].isin(diff_in_new['id'])]
     
     if len(diff_in_new):
 
         # Write new records into .csv file
-        with open('diff.csv', 'w') as diff:
-            newFull.to_csv('diff.csv', index= False)
+        newFull.to_csv('diff.csv', index= False)
     
         # Upload to AWS
         with open("diff.csv", "rb") as f:

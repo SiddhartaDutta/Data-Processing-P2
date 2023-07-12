@@ -64,7 +64,8 @@ def main():
 
     # Read full-> Create and compare short 
     try:
-        src = pd.read_csv(srcFile, usecols= colName, sep= delimiter)
+        srcFull = pd.read_csv(srcFile, sep= delimiter)
+        src = srcFull[colName]
     except:
         print('Missing src file')
         sendEmail(sns_client, 'Daily Check: Failed', 'Daily check could not be completed: missing \'src.csv\' file.', TOPIC_ARN)
@@ -80,8 +81,20 @@ def main():
     # Get differences
     diff_in_new = newFull[colName][~newFull[colName].apply(tuple,1).isin(src.apply(tuple,1))]
 
-    # Cut down new
+    # Cut down new and old
+    srcFull = srcFull[srcFull['id'].isin(diff_in_new['id'])]
     newFull = newFull[newFull['id'].isin(diff_in_new['id'])]
+
+    # Rename columns
+    srcFull = srcFull.add_prefix('Old_')
+    newFull = newFull.add_prefix('New_')
+
+    # Rename ID cols to default
+    srcFull.columns = srcFull.columns.str.replace('Old_id', 'id')
+    newFull.columns = newFull.columns.str.replace('New_id', 'id')
+
+    # Merge src > new
+    newFull = pd.merge(srcFull, newFull, on=['id'])
     
     if len(diff_in_new):
 

@@ -59,7 +59,7 @@ def createPreassignedURL(s3Client, bucket, object, expiration):
 
     return response
 
-def merge_from_difference_df(diff_src, diff_new):
+def merge_from_difference_df(key_col, diff_src, diff_new):
     """Pass in 2 difference dataframes, one listing changes with base src and the other base new. Returns merged dataframe."""
 
     # Rename columns
@@ -67,11 +67,24 @@ def merge_from_difference_df(diff_src, diff_new):
     diff_new = diff_new.add_prefix('New_')
 
     # Rename ID columns to default ('id')
-    diff_src.columns.values[0] = 'id'
-    diff_new.columns.values[0] = 'id'
+    diff_src.rename(columns = {'Old_' + key_col : key_col}, inplace = True)
+    diff_new.rename(columns = {'New_' + key_col : key_col}, inplace = True)
 
-    # Merge and return
-    return pd.merge(diff_src, diff_new, on='id')
+    # Merge
+    merged = pd.merge(diff_src, diff_new, on= key_col)
+
+    # Reorder and return
+        # Alternate columns
+    merged = merged[list(sum(zip(diff_src.columns, diff_new.columns), ()))]
+
+        # Remove duplicate columns
+    merged = merged.T.drop_duplicates().T
+
+        # bring key_col to front and return
+    cols = list(merged)
+    cols.insert(0, cols.pop(cols.index(key_col)))
+    return merged.loc[:, cols]
+
 
 # MAIN
 def main():
@@ -101,7 +114,7 @@ def main():
     if len(diff_in_new):
 
         # Write new records into .csv file
-        merged = merge_from_difference_df(diff_in_src, diff_in_new)
+        merged = merge_from_difference_df('id', diff_in_src, diff_in_new)
         merged.to_csv('diff.csv', index= False)
     
         # Upload to AWS

@@ -59,47 +59,50 @@ def createPreassignedURL(s3Client, bucket, object, expiration):
 
     return response
 
+def merge_from_difference_df(diff_src, diff_new):
+    """Pass in 2 difference dataframes, one listing changes with base src and the other base new. Returns merged dataframe."""
+
+    # Rename columns
+    diff_src = diff_src.add_prefix('Old_')
+    diff_new = diff_new.add_prefix('New_')
+
+    # Rename ID columns to default ('id')
+    diff_src.columns.values[0] = 'id'
+    diff_new.columns.values[0] = 'id'
+
+    # Merge and return
+    return pd.merge(diff_src, diff_new, on='id')
+
 # MAIN
 def main():
 
     # Read full-> Create and compare short 
     try:
-        srcFull = pd.read_csv(srcFile, sep= delimiter)
-        src = srcFull[colName]
+        src = pd.read_csv(srcFile, usecols=colName, sep= delimiter)
+        #src = srcFull[colName]
     except:
         print('Missing src file')
         sendEmail(sns_client, 'Daily Check: Failed', 'Daily check could not be completed: missing \'src.csv\' file.', TOPIC_ARN)
         exit()
         
     try:
-        newFull = pd.read_csv(newFile, sep= delimiter)
+        new = pd.read_csv(newFile, usecols=colName, sep= delimiter)
+        #new = newFull[colName]
     except:
         print('Missing new file')
         sendEmail(sns_client, 'Daily Check: Failed', 'Daily check could not be completed: missing \'new.csv\' file.', TOPIC_ARN)
         exit()
 
     # Get differences
-    diff_in_new = newFull[colName][~newFull[colName].apply(tuple,1).isin(src.apply(tuple,1))]
+    diff_in_new = new[~new.apply(tuple,1).isin(src.apply(tuple,1))]
+    diff_in_src = src[~src.apply(tuple,1).isin(new.apply(tuple,1))]
 
-    # Cut down new and old
-    srcFull = srcFull[srcFull['id'].isin(diff_in_new['id'])]
-    newFull = newFull[newFull['id'].isin(diff_in_new['id'])]
-
-    # Rename columns
-    srcFull = srcFull.add_prefix('Old_')
-    newFull = newFull.add_prefix('New_')
-
-    # Rename ID cols to default
-    srcFull.columns.values[0] = 'id'
-    newFull.columns.values[0] = 'id'
-
-    # Merge src > new
-    newFull = pd.merge(srcFull, newFull, on=['id'])
     
     if len(diff_in_new):
 
         # Write new records into .csv file
-        newFull.to_csv('diff.csv', index= False)
+        merged = merge_from_difference_df(diff_in_src, diff_in_new)
+        merged.to_csv('diff.csv', index= False)
     
         # Upload to AWS
         with open("diff.csv", "rb") as f:

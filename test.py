@@ -90,8 +90,8 @@ def main():
     newFull = newFull.add_prefix('New_')
 
     # Rename ID cols to default
-    srcFull.columns = srcFull.columns.str.replace('Old_id', 'id')
-    newFull.columns = newFull.columns.str.replace('New_id', 'id')
+    srcFull.columns.values[0] = 'id'
+    newFull.columns.values[0] = 'id'
 
     # Merge src > new
     newFull = pd.merge(srcFull, newFull, on=['id'])

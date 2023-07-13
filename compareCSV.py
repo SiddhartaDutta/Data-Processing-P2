@@ -28,7 +28,8 @@ print(srcFile)
 print(newFile)
 
 colName = ['id', 'first_name', 'address']
-delimiter = ','
+colName = ['Local_Product_Code','Product_Long_Name_PL','Product_Base_UOM_Name','Brand_Product_Per_Pack_Qty']
+delimiter = '|'
 
 # Print changes
 def printAllChanges(diff_in_orig, diff_in_new):
@@ -62,25 +63,27 @@ def createPreassignedURL(s3Client, bucket, object, expiration):
 def merge_from_difference_df(key_col, diff_src, diff_new):
     """Pass in 2 difference dataframes, one listing changes with base src and the other base new. Returns merged dataframe."""
 
-    # Rename columns
-    diff_src = diff_src.add_prefix('Old_')
-    diff_new = diff_new.add_prefix('New_')
-
-    # Rename ID columns to default ('id')
-    diff_src.rename(columns = {'Old_' + key_col : key_col}, inplace = True)
-    diff_new.rename(columns = {'New_' + key_col : key_col}, inplace = True)
-
     # Merge
-    merged = pd.merge(diff_src, diff_new, on= key_col)
+    merged = diff_new.join(diff_src, lsuffix='_new', rsuffix='_old', how='left')
 
-    # Reorder and return
-        # Alternate columns
-    merged = merged[list(sum(zip(diff_src.columns, diff_new.columns), ()))]
+    # Rename old columns
+    for col in range(len(diff_new.columns)):
+        diff_new.columns.values[col] = diff_new.columns[col] + '_new'
+        diff_src.columns.values[col] = diff_src.columns[col] + '_old'
 
-        # Remove duplicate columns
-    merged = merged.T.drop_duplicates().T
+    # Alternate columns
+    merged = merged[list(sum(zip(diff_new.columns, diff_src.columns), ()))]
+    #print(merged1.columns)
+    #merged = merged1[ ['Local_Product_Code_new'] + [ col for col in merged1.columns if col != 'Local_Product_Code_new']]
+    #print(merged)
 
-        # bring key_col to front and return
+    # Drop duplicate key_col
+    merged = merged.drop(key_col + '_old', axis=1)
+    
+    # Rename key_col
+    merged = merged.rename(columns={key_col + '_new' : key_col})
+
+    # Bring key_col to front and return
     cols = list(merged)
     cols.insert(0, cols.pop(cols.index(key_col)))
     return merged.loc[:, cols]
@@ -114,7 +117,8 @@ def main():
     if len(diff_in_new):
 
         # Write new records into .csv file
-        merged = merge_from_difference_df('id', diff_in_src, diff_in_new)
+        merged = merge_from_difference_df('Local_Product_Code', diff_in_src, diff_in_new)
+        print(merged)
         merged.to_csv('diff.csv', index= False)
     
         # Upload to AWS

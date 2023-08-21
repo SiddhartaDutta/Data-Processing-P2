@@ -24,11 +24,14 @@ newFile = 's3://' + BUCKET_NAME + '/test_upload/new.csv'
 srcFile = 'src.csv'
 newFile = 'new.csv'
 
+srcFile = 'RBH_ProductMaster_20230711_0730_DATA.txt'
+newFile = 'RBH_ProductMaster_20230712_0730_DATA.txt'
+
 print(srcFile)
 print(newFile)
 
 colName = ['id', 'first_name', 'address']
-colName = ['Local_Product_Code','Product_Long_Name_PL','Product_Base_UOM_Name','Brand_Product_Per_Pack_Qty']
+colName = ['Local_Product_Code','Product_Long_Name_PL','Product_Base_UOM_Name','Brand_Product_Per_Pack_Qty', 'Product_Tar_Qty']
 delimiter = '|'
 
 # Print changes

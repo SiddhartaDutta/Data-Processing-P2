@@ -1,2 +1,7 @@
 .env
-diff.csv
+*.csv
+*.txt
+*.json
+
+test2.py
+sfToBQ.py

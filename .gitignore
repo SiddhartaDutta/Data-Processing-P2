@@ -2,6 +2,8 @@
 *.csv
 *.txt
 *.json
+*.jar
 
 test2.py
 sfToBQ.py
+vertica_to_gcs_bq_wlan.py

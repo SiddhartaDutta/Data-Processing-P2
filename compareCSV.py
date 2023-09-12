@@ -1,3 +1,10 @@
+###
+#
+# Compare last 2 days of inventory/product records (AWS S3 Storage, Glue Job)
+# BASE SCRIPT
+# 
+###
+
 import os
 import csv
 import boto3
